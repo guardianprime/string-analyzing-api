@@ -30,23 +30,29 @@ stringRoutes.get("/strings", async (req, res) => {
   }
 });
 
-// POST
+// POST new string analysis
 stringRoutes.post("/strings", async (req, res) => {
   try {
     const { value } = req.body;
 
-    if (!value || typeof value !== "string") {
-      return res.status(400).json({ error: "Invalid value provided" });
+    // 400: Missing "value" field
+    if (value === undefined || value === null) {
+      return res.status(400).json({
+        error: "Missing required field: value",
+      });
     }
 
-    const analyzed = analyzeLogic(value);
-    const response = {
-      ...analyzed,
-      created_at: new Date().toISOString(),
-    };
+    // 422: Invalid data type (not a string)
+    if (typeof value !== "string") {
+      return res.status(422).json({
+        error: "Invalid data type for value: must be a string",
+      });
+    }
 
+    // Ensuring directory exists
     await fs.mkdir(DATA_DIR, { recursive: true });
 
+    // Read existing data
     let allStrings = [];
     try {
       const fileData = await fs.readFile(DATA_FILE, "utf-8");
@@ -56,6 +62,20 @@ stringRoutes.post("/strings", async (req, res) => {
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
+
+    // 409: String already exists in the system
+    const stringExists = allStrings.some((item) => item.value === value);
+    if (stringExists) {
+      return res.status(409).json({
+        error: "String already exists in the system",
+      });
+    }
+
+    const analyzed = analyzeLogic(value);
+    const response = {
+      ...analyzed,
+      created_at: new Date().toISOString(),
+    };
 
     allStrings.push(response);
 
