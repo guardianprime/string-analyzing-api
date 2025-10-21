@@ -1,20 +1,71 @@
 import { Router } from "express";
 import analyzeLogic from "../logic.js";
+import fs from "fs/promises";
+import path from "path";
 
 const stringRoutes = Router();
 
-stringRoutes.get("/strings", (req, res) => {
-  const { value } = req.body;
-  const properties = analyzeLogic(value);
+const DATA_FILE = path.join(process.cwd(), "data", "data.json");
+const DATA_DIR = path.dirname(DATA_FILE);
 
-  res.status(200).json({ properties });
+// GET all strings
+stringRoutes.get("/strings", async (req, res) => {
+  try {
+    if (
+      !(await fs
+        .access(DATA_FILE)
+        .then(() => true)
+        .catch(() => false))
+    ) {
+      return res.status(200).json([]);
+    }
+
+    const fileData = await fs.readFile(DATA_FILE, "utf-8");
+    const allStrings = fileData.trim() ? JSON.parse(fileData) : [];
+
+    res.status(200).json(allStrings);
+  } catch (error) {
+    console.error("Error reading strings:", error);
+    res.status(500).json({ error: "Failed to retrieve strings" });
+  }
 });
 
-stringRoutes.post("/strings", (req, res) => {
-  const { value } = req.body;
-  const properties = analyzeLogic(value);
+// POST
+stringRoutes.post("/strings", async (req, res) => {
+  try {
+    const { value } = req.body;
 
-  res.status(201).json({ properties });
+    if (!value || typeof value !== "string") {
+      return res.status(400).json({ error: "Invalid value provided" });
+    }
+
+    const analyzed = analyzeLogic(value);
+    const response = {
+      ...analyzed,
+      created_at: new Date().toISOString(),
+    };
+
+    await fs.mkdir(DATA_DIR, { recursive: true });
+
+    let allStrings = [];
+    try {
+      const fileData = await fs.readFile(DATA_FILE, "utf-8");
+      if (fileData.trim()) {
+        allStrings = JSON.parse(fileData);
+      }
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+
+    allStrings.push(response);
+
+    await fs.writeFile(DATA_FILE, JSON.stringify(allStrings, null, 2));
+
+    res.status(201).json(response);
+  } catch (error) {
+    console.error("Error analyzing string:", error);
+    res.status(500).json({ error: "Failed to analyze string" });
+  }
 });
 
 export default stringRoutes;

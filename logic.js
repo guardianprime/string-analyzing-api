@@ -20,6 +20,8 @@ function analyzeLogic(string) {
   }
 
   const newData = {
+    id: sha256Hash,
+    value: string,
     properties: {
       length: string.length,
       is_palindrome: checkPalindrome(string),
