@@ -88,4 +88,24 @@ stringRoutes.post("/strings", async (req, res) => {
   }
 });
 
+stringRoutes.get("/strings/:string_value", async (req, res) => {
+  const { string_value } = req.params;
+
+  try {
+    const fileData = await fs.readFile(DATA_FILE, "utf-8");
+    const allStrings = fileData.trim() ? JSON.parse(fileData) : [];
+
+    const stringData = allStrings.find((item) => item.value === string_value);
+
+    if (!stringData) {
+      return res.status(404).json({ error: "String not found" });
+    }
+
+    res.status(200).json(stringData);
+  } catch (error) {
+    console.error("Error retrieving string:", error);
+    res.status(500).json({ error: "Failed to retrieve string" });
+  }
+});
+
 export default stringRoutes;
