@@ -2,6 +2,7 @@ import { Router } from "express";
 import analyzeLogic from "../logic.js";
 import fs from "fs/promises";
 import path from "path";
+import { validateQueryParams, applyFilters } from "../utils.js";
 
 const stringRoutes = Router();
 
@@ -105,6 +106,59 @@ stringRoutes.get("/strings/:string_value", async (req, res) => {
   } catch (error) {
     console.error("Error retrieving string:", error);
     res.status(500).json({ error: "Failed to retrieve string" });
+  }
+});
+
+// GET all strings with filtering
+stringRoutes.get("/strings", async (req, res) => {
+  try {
+    // Validate query parameters
+    const { filters, errors } = validateQueryParams(req.query);
+
+    if (errors.length > 0) {
+      return res.status(400).json({
+        error: "Invalid query parameters",
+        details: errors,
+      });
+    }
+
+    // Read data from file
+    let allStrings = [];
+    try {
+      if (
+        await fs
+          .access(DATA_FILE)
+          .then(() => true)
+          .catch(() => false)
+      ) {
+        const fileData = await fs.readFile(DATA_FILE, "utf-8");
+        if (fileData.trim()) {
+          allStrings = JSON.parse(fileData);
+        }
+      }
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+
+    // Apply filters
+    const filteredStrings = applyFilters(allStrings, filters);
+
+    // Build response
+    const response = {
+      data: filteredStrings,
+      count: filteredStrings.length,
+      filters_applied: Object.keys(filters).length > 0 ? filters : undefined,
+    };
+
+    // Remove filters_applied if no filters were used
+    if (!response.filters_applied) {
+      delete response.filters_applied;
+    }
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Error reading strings:", error);
+    res.status(500).json({ error: "Failed to retrieve strings" });
   }
 });
 
