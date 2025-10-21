@@ -1,15 +1,20 @@
 import { Router } from "express";
+import analyzeLogic from "../logic.js";
 
 const stringRoutes = Router();
 
 stringRoutes.get("/strings", (req, res) => {
-  res.status(200).send("it worked");
+  const { value } = req.body;
+  const properties = analyzeLogic(value);
+
+  res.status(200).json({ properties });
 });
 
 stringRoutes.post("/strings", (req, res) => {
-  const { stringValue } = req.body;
+  const { value } = req.body;
+  const properties = analyzeLogic(value);
 
-  res.status(201).json(stringValue);
+  res.status(201).json({ properties });
 });
 
 export default stringRoutes;
