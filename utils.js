@@ -2,6 +2,21 @@ const validateQueryParams = (query) => {
   const errors = [];
   const filters = {};
 
+  const allowedParams = [
+    "is_palindrome",
+    "min_length",
+    "max_length",
+    "word_count",
+    "contains_character",
+  ];
+
+  // Detect unknown query parameters
+  for (const key of Object.keys(query)) {
+    if (!allowedParams.includes(key)) {
+      errors.push(`Unknown query parameter: ${key}`);
+    }
+  }
+
   // Validate is_palindrome
   if (query.is_palindrome !== undefined) {
     if (query.is_palindrome !== "true" && query.is_palindrome !== "false") {
